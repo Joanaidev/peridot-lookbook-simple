@@ -74,22 +74,38 @@ const PeridotLookbookCreator = () => {
         return;
       }
 
+      // Show the user what's happening
+      alert('Creating your slide image... Click OK and look for the download link below!');
+
       const canvas = await html2canvas(element, {
         backgroundColor: '#ffffff',
         scale: 2
       });
       
-      // Create download - SIMPLEST method
+      // Create a visible download link instead of auto-download
       const dataURL = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = dataURL;
-      link.download = `Peridot-${currentLook.title}-${Date.now()}.png`;
-      link.click();
       
-      alert('Download started! Check your Downloads folder.');
+      // Create a download area in the page
+      let downloadArea = document.getElementById('download-area');
+      if (!downloadArea) {
+        downloadArea = document.createElement('div');
+        downloadArea.id = 'download-area';
+        downloadArea.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f59e0b; color: white; padding: 20px; border-radius: 10px; z-index: 9999; max-width: 300px;';
+        document.body.appendChild(downloadArea);
+      }
+      
+      downloadArea.innerHTML = `
+        <h3>✅ Slide Ready!</h3>
+        <p>Right-click the link below and select "Save link as..."</p>
+        <a href="${dataURL}" download="Peridot-${currentLook.title}-${Date.now()}.png" style="color: white; text-decoration: underline; font-weight: bold;">
+          💾 DOWNLOAD: ${currentLook.title}.png
+        </a>
+        <br><br>
+        <button onclick="this.parentElement.remove()" style="background: white; color: #f59e0b; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Close</button>
+      `;
       
     } catch (error) {
-      alert('Export failed - try right-clicking the slide and "Save as image"');
+      alert('Export failed - try creating the slide again');
     }
   };
 
@@ -101,7 +117,19 @@ const PeridotLookbookCreator = () => {
       return;
     }
 
-    alert(`Starting export of ${completedLooks.length} slides...`);
+    alert(`Creating ${completedLooks.length} slide images... Look for download links!`);
+
+    // Remove any existing download area
+    const existingArea = document.getElementById('download-area');
+    if (existingArea) existingArea.remove();
+
+    // Create download area
+    const downloadArea = document.createElement('div');
+    downloadArea.id = 'download-area';
+    downloadArea.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f59e0b; color: white; padding: 20px; border-radius: 10px; z-index: 9999; max-width: 350px; max-height: 400px; overflow-y: auto;';
+    document.body.appendChild(downloadArea);
+
+    downloadArea.innerHTML = '<h3>📸 Creating slides...</h3>';
 
     for (let i = 0; i < completedLooks.length; i++) {
       const look = completedLooks[i];
@@ -115,20 +143,27 @@ const PeridotLookbookCreator = () => {
           });
           
           const dataURL = canvas.toDataURL('image/png');
-          const link = document.createElement('a');
-          link.href = dataURL;
-          link.download = `Peridot-${look.title}-${Date.now()}.png`;
-          link.click();
           
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Add download link for each slide
+          downloadArea.innerHTML += `
+            <p>✅ <strong>${look.title}</strong></p>
+            <a href="${dataURL}" download="Peridot-${look.title}-${Date.now()}.png" style="color: white; text-decoration: underline;">
+              💾 Right-click to save ${look.title}.png
+            </a><br><br>
+          `;
+          
+          await new Promise(resolve => setTimeout(resolve, 500));
           
         } catch (error) {
-          console.error(`Error exporting ${look.title}:`, error);
+          console.error(`Error creating ${look.title}:`, error);
         }
       }
     }
     
-    alert(`Export complete! ${completedLooks.length} slides should be in Downloads folder!`);
+    downloadArea.innerHTML += `
+      <hr style="margin: 15px 0;">
+      <button onclick="this.parentElement.remove()" style="background: white; color: #f59e0b; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Close All Downloads</button>
+    `;
   };
 
   const currentLook = looks[currentLookIndex];
