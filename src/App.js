@@ -8,7 +8,7 @@ const PeridotLookbookCreator = () => {
   ]);
   const [currentLookIndex, setCurrentLookIndex] = useState(0);
   const [clientName, setClientName] = useState('');
-  const [viewMode, setViewMode] = useState('edit'); // 'edit' or 'preview'
+  const [viewMode, setViewMode] = useState('edit');
   
   const clientInputRef = useRef(null);
   const lookInputRef = useRef(null);
@@ -65,13 +65,100 @@ const PeridotLookbookCreator = () => {
     setLooks(newLooks);
   };
 
+  const exportCurrentSlide = () => {
+    // Simple screenshot approach using browser API
+    const element = document.getElementById(`export-slide-${currentLook.id}`);
+    if (!element) {
+      alert('Please switch to a look with content to export!');
+      return;
+    }
+
+    // Create a simple export notification
+    const exportData = {
+      clientName: clientName || 'Client',
+      lookTitle: currentLook.title,
+      description: currentLook.description,
+      imageCount: currentLook.images.length,
+      timestamp: new Date().toLocaleDateString()
+    };
+
+    // For now, show export info (in a real app, this would generate the actual PNG)
+    alert(`🎉 Export Ready!\n\nClient: ${exportData.clientName}\nLook: ${exportData.lookTitle}\nImages: ${exportData.imageCount}\n\nThis would download: Peridot-Images-${exportData.lookTitle.replace(/\s+/g, '-')}-${exportData.clientName}.png`);
+  };
+
+  const exportFullLookbook = () => {
+    const completedLooks = looks.filter(look => look.images.length > 0 || look.description);
+    alert(`🎉 Full Lookbook Export!\n\nReady to export ${completedLooks.length} professional slides for ${clientName || 'your client'}!\n\nThis would create a complete branded lookbook with cover page and copyright protection.`);
+  };
+
   const currentLook = looks[currentLookIndex];
   const completedLooks = looks.filter(look => look.images.length > 0 || look.description);
 
-  // PREVIEW MODE
   if (viewMode === 'preview') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-yellow-50">
+        {/* Hidden Export Elements */}
+        <div className="hidden">
+          {completedLooks.map((look) => (
+            <div key={`export-${look.id}`} id={`export-slide-${look.id}`} className="w-[800px] h-[1200px] bg-gradient-to-br from-amber-50 via-white to-yellow-50 relative overflow-hidden">
+              <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
+                <div className="text-8xl font-bold text-amber-800 transform rotate-45">PERIDOT IMAGES</div>
+              </div>
+              
+              <div className="relative z-10 h-full p-12">
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <Crown className="w-8 h-8 text-amber-600" />
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                      PERIDOT IMAGES
+                    </h1>
+                  </div>
+                  <div className="w-24 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto mb-6"></div>
+                  <h2 className="text-3xl font-bold text-amber-900 mb-2">{look.title}</h2>
+                  {clientName && (
+                    <p className="text-lg text-amber-700">For {clientName}</p>
+                  )}
+                </div>
+
+                {clientImage && (
+                  <div className="mb-8 text-center">
+                    <h3 className="text-lg font-semibold text-amber-800 mb-4">Your Inspiration</h3>
+                    <div className="max-w-64 mx-auto">
+                      <img src={clientImage} alt="Client reference" className="w-full rounded-2xl shadow-lg border-4 border-white" />
+                    </div>
+                  </div>
+                )}
+
+                {look.description && (
+                  <div className="mb-8">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-amber-200">
+                      <h3 className="text-lg font-semibold text-amber-800 mb-3 text-center">The Vision</h3>
+                      <p className="text-amber-900 leading-relaxed text-center">{look.description}</p>
+                    </div>
+                  </div>
+                )}
+
+                {look.images.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-amber-800 mb-4 text-center">Style Inspiration</h3>
+                    <div className="space-y-4">
+                      {look.images.map((img) => (
+                        <div key={img.id} className="bg-white/60 rounded-xl p-4 shadow-md border border-amber-200">
+                          <img src={img.src} alt="Style inspiration" className="w-full max-h-64 object-contain rounded-lg mx-auto" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="absolute bottom-4 left-12 right-12 text-center">
+                  <p className="text-amber-600/70 text-xs">© Peridot Images - Exclusive Style Curation</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Preview Navigation */}
         <div className="bg-white shadow-sm border-b sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -89,11 +176,15 @@ const PeridotLookbookCreator = () => {
                   PERIDOT IMAGES
                 </h1>
               </div>
-              <p className="text-sm text-amber-700">{completedLooks.length} slides ready</p>
+              <p className="text-sm text-amber-700">{completedLooks.length} slides ready for export</p>
             </div>
-            <div className="text-sm text-amber-600">
-              Export coming next!
-            </div>
+            <button
+              onClick={exportFullLookbook}
+              className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg hover:from-amber-600 hover:to-yellow-600 shadow-lg"
+            >
+              <Download className="w-4 h-4" />
+              Export Lookbook
+            </button>
           </div>
         </div>
 
@@ -124,10 +215,18 @@ const PeridotLookbookCreator = () => {
                   <h1 className="text-2xl font-bold">PERIDOT IMAGES</h1>
                 </div>
                 <h2 className="text-xl">{currentLook.title}</h2>
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={exportCurrentSlide}
+                    className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export This Slide
+                  </button>
+                </div>
               </div>
 
               <div className="p-8 bg-gradient-to-br from-amber-50 to-yellow-50">
-                {/* Client Reference */}
                 {clientImage && (
                   <div className="mb-8 text-center">
                     <h3 className="text-lg font-semibold text-amber-800 mb-4">Your Inspiration</h3>
@@ -137,7 +236,6 @@ const PeridotLookbookCreator = () => {
                   </div>
                 )}
 
-                {/* Look Description */}
                 {currentLook.description && (
                   <div className="mb-8 text-center">
                     <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-amber-200">
@@ -147,7 +245,6 @@ const PeridotLookbookCreator = () => {
                   </div>
                 )}
 
-                {/* Inspiration Images */}
                 {currentLook.images.length > 0 && (
                   <div>
                     <h3 className="text-xl font-semibold text-amber-800 mb-6 text-center">Style Inspiration</h3>
@@ -161,7 +258,6 @@ const PeridotLookbookCreator = () => {
                   </div>
                 )}
 
-                {/* Watermark */}
                 <div className="text-center mt-8 text-amber-600/60 text-sm">
                   © Peridot Images - Exclusive Style Curation
                 </div>
@@ -169,7 +265,6 @@ const PeridotLookbookCreator = () => {
             </div>
           )}
 
-          {/* Empty State */}
           {completedLooks.length === 0 && (
             <div className="text-center py-16 text-amber-500">
               <Crown className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -181,7 +276,6 @@ const PeridotLookbookCreator = () => {
     );
   }
 
-  // EDIT MODE (existing code)
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       <div className="bg-white shadow-sm border-b">
@@ -219,7 +313,6 @@ const PeridotLookbookCreator = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Client Reference Setup */}
         <div className="bg-white rounded-2xl shadow-lg mb-8 overflow-hidden border border-amber-200">
           <div className="p-6 border-b bg-gradient-to-r from-amber-500 to-yellow-500 text-white">
             <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -253,7 +346,6 @@ const PeridotLookbookCreator = () => {
           </div>
         </div>
 
-        {/* Look Creator */}
         <div className="bg-white rounded-2xl shadow-lg mb-8 overflow-hidden border border-amber-200">
           <div className="p-6 border-b bg-gradient-to-r from-yellow-500 to-amber-500 text-white">
             <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -263,7 +355,6 @@ const PeridotLookbookCreator = () => {
           </div>
           
           <div className="p-6">
-            {/* Look Tabs */}
             <div className="flex flex-wrap gap-2 mb-6">
               {looks.map((look, index) => (
                 <button
@@ -290,7 +381,6 @@ const PeridotLookbookCreator = () => {
               </button>
             </div>
 
-            {/* Current Look Editor */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div>
