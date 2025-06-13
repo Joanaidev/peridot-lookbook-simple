@@ -81,6 +81,4 @@ const PeridotLookbookCreator = () => {
     </div>
   );
 };
-
-export default PeridotLookbookCreator;
-Force rebuild - fix dynamic import
+export default PeridotLookbookCreator;  // ← WITH SEMICOLON
