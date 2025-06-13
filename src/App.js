@@ -66,6 +66,37 @@ const PeridotLookbookCreator = () => {
     setLooks(newLooks);
   };
 
+  // FIXED EXPORT FUNCTION - This will actually download files!
+  const downloadImage = (canvas, filename) => {
+    // Convert canvas to blob (more reliable than dataURL)
+    canvas.toBlob((blob) => {
+      if (blob) {
+        // Handle Internet Explorer
+        if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+          window.navigator.msSaveOrOpenBlob(blob, filename);
+          return;
+        }
+
+        // Create download link for other browsers
+        const url = window.URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        downloadLink.style.display = 'none';
+        downloadLink.href = url;
+        downloadLink.download = filename;
+        
+        // Add to page, click, and remove
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        
+        // Clean up after download
+        setTimeout(() => {
+          document.body.removeChild(downloadLink);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      }
+    }, 'image/png', 0.95);
+  };
+
   const exportCurrentSlide = async () => {
     try {
       const element = document.getElementById(`export-slide-${currentLook.id}`);
@@ -74,38 +105,44 @@ const PeridotLookbookCreator = () => {
         return;
       }
 
-      // Show the user what's happening
-      alert('Creating your slide image... Click OK and look for the download link below!');
+      // Update button to show progress
+      const exportButton = document.querySelector('[data-export-current]');
+      const originalText = exportButton?.textContent;
+      if (exportButton) {
+        exportButton.textContent = 'Creating...';
+        exportButton.disabled = true;
+      }
 
       const canvas = await html2canvas(element, {
         backgroundColor: '#ffffff',
-        scale: 2
+        scale: 2,
+        useCORS: true,
+        allowTaint: false
       });
       
-      // Create a visible download link instead of auto-download
-      const dataURL = canvas.toDataURL('image/png');
+      // Generate filename and download
+      const filename = `Peridot-${currentLook.title}-${Date.now()}.png`;
+      downloadImage(canvas, filename);
       
-      // Create a download area in the page
-      let downloadArea = document.getElementById('download-area');
-      if (!downloadArea) {
-        downloadArea = document.createElement('div');
-        downloadArea.id = 'download-area';
-        downloadArea.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f59e0b; color: white; padding: 20px; border-radius: 10px; z-index: 9999; max-width: 300px;';
-        document.body.appendChild(downloadArea);
+      // Show success and reset button
+      if (exportButton) {
+        exportButton.textContent = 'Downloaded!';
+        setTimeout(() => {
+          exportButton.textContent = originalText;
+          exportButton.disabled = false;
+        }, 2000);
       }
       
-      downloadArea.innerHTML = `
-        <h3>✅ Slide Ready!</h3>
-        <p>Right-click the link below and select "Save link as..."</p>
-        <a href="${dataURL}" download="Peridot-${currentLook.title}-${Date.now()}.png" style="color: white; text-decoration: underline; font-weight: bold;">
-          💾 DOWNLOAD: ${currentLook.title}.png
-        </a>
-        <br><br>
-        <button onclick="this.parentElement.remove()" style="background: white; color: #f59e0b; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Close</button>
-      `;
-      
     } catch (error) {
-      alert('Export failed - try creating the slide again');
+      console.error('Export failed:', error);
+      alert('Export failed - please try again');
+      
+      // Reset button on error
+      const exportButton = document.querySelector('[data-export-current]');
+      if (exportButton) {
+        exportButton.textContent = 'Export This Slide';
+        exportButton.disabled = false;
+      }
     }
   };
 
@@ -117,19 +154,15 @@ const PeridotLookbookCreator = () => {
       return;
     }
 
-    alert(`Creating ${completedLooks.length} slide images... Look for download links!`);
+    // Update button to show progress
+    const exportButton = document.querySelector('[data-export-all]');
+    const originalText = exportButton?.textContent;
+    if (exportButton) {
+      exportButton.textContent = `Exporting ${completedLooks.length} slides...`;
+      exportButton.disabled = true;
+    }
 
-    // Remove any existing download area
-    const existingArea = document.getElementById('download-area');
-    if (existingArea) existingArea.remove();
-
-    // Create download area
-    const downloadArea = document.createElement('div');
-    downloadArea.id = 'download-area';
-    downloadArea.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f59e0b; color: white; padding: 20px; border-radius: 10px; z-index: 9999; max-width: 350px; max-height: 400px; overflow-y: auto;';
-    document.body.appendChild(downloadArea);
-
-    downloadArea.innerHTML = '<h3>📸 Creating slides...</h3>';
+    let successCount = 0;
 
     for (let i = 0; i < completedLooks.length; i++) {
       const look = completedLooks[i];
@@ -139,20 +172,19 @@ const PeridotLookbookCreator = () => {
         try {
           const canvas = await html2canvas(element, {
             backgroundColor: '#ffffff',
-            scale: 2
+            scale: 2,
+            useCORS: true,
+            allowTaint: false
           });
           
-          const dataURL = canvas.toDataURL('image/png');
+          // Generate filename and download
+          const filename = `Peridot-${look.title}-${Date.now()}.png`;
+          downloadImage(canvas, filename);
           
-          // Add download link for each slide
-          downloadArea.innerHTML += `
-            <p>✅ <strong>${look.title}</strong></p>
-            <a href="${dataURL}" download="Peridot-${look.title}-${Date.now()}.png" style="color: white; text-decoration: underline;">
-              💾 Right-click to save ${look.title}.png
-            </a><br><br>
-          `;
+          successCount++;
           
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Small delay between downloads
+          await new Promise(resolve => setTimeout(resolve, 800));
           
         } catch (error) {
           console.error(`Error creating ${look.title}:`, error);
@@ -160,10 +192,18 @@ const PeridotLookbookCreator = () => {
       }
     }
     
-    downloadArea.innerHTML += `
-      <hr style="margin: 15px 0;">
-      <button onclick="this.parentElement.remove()" style="background: white; color: #f59e0b; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Close All Downloads</button>
-    `;
+    // Show completion message and reset button
+    if (exportButton) {
+      exportButton.textContent = `${successCount} files downloaded!`;
+      setTimeout(() => {
+        exportButton.textContent = originalText;
+        exportButton.disabled = false;
+      }, 3000);
+    }
+    
+    if (successCount > 0) {
+      alert(`Success! ${successCount} PNG files have been downloaded to your Downloads folder.`);
+    }
   };
 
   const currentLook = looks[currentLookIndex];
@@ -255,6 +295,7 @@ const PeridotLookbookCreator = () => {
             </div>
             <button
               onClick={exportFullLookbook}
+              data-export-all
               className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg hover:from-amber-600 hover:to-yellow-600 shadow-lg"
             >
               <Download className="w-4 h-4" />
@@ -293,6 +334,7 @@ const PeridotLookbookCreator = () => {
                 <div className="mt-4 flex justify-center">
                   <button
                     onClick={exportCurrentSlide}
+                    data-export-current
                     className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all flex items-center gap-2"
                   >
                     <Download className="w-4 h-4" />
