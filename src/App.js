@@ -466,17 +466,17 @@ const PeridotLookbookCreator = () => {
                   </div>
                 )}
 
-                {/* Style Images */}
+                {/* Style Images - MUCH LARGER NOW! */}
                 {look.images.length > 0 && (
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-amber-800 mb-4 text-center">Style Inspiration</h3>
-                    <div className="space-y-4">
-                      {look.images.slice(0, 3).map((img) => (
-                        <div key={img.id} className="bg-white/80 rounded-xl p-4 shadow-md border border-amber-200">
+                    <div className="space-y-6">
+                      {look.images.slice(0, 2).map((img) => (
+                        <div key={img.id} className="bg-white/80 rounded-xl p-6 shadow-md border border-amber-200">
                           <img 
                             src={img.src} 
                             alt="Style inspiration" 
-                            className="w-full max-h-48 object-contain rounded-lg mx-auto"
+                            className="w-full max-h-96 object-contain rounded-lg mx-auto"
                             crossOrigin="anonymous"
                           />
                         </div>
@@ -583,10 +583,10 @@ const PeridotLookbookCreator = () => {
                 {currentLook.images.length > 0 && (
                   <div>
                     <h3 className="text-xl font-semibold text-amber-800 mb-6 text-center">Style Inspiration</h3>
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       {currentLook.images.map((img) => (
                         <div key={img.id} className="bg-white/60 rounded-xl p-6 shadow-lg border border-amber-200">
-                          <img src={img.src} alt="Style inspiration" className="w-full max-h-80 object-contain rounded-lg mx-auto" />
+                          <img src={img.src} alt="Style inspiration" className="w-full max-h-96 object-contain rounded-lg mx-auto" />
                         </div>
                       ))}
                     </div>
