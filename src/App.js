@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Plus, Eye, Camera, Sparkles, Crown } from 'lucide-react';
+import { Upload, Plus, Download, Eye, Camera, Sparkles, Crown, ArrowLeft } from 'lucide-react';
 
 const PeridotLookbookCreator = () => {
   const [clientImage, setClientImage] = useState(null);
@@ -8,6 +8,7 @@ const PeridotLookbookCreator = () => {
   ]);
   const [currentLookIndex, setCurrentLookIndex] = useState(0);
   const [clientName, setClientName] = useState('');
+  const [viewMode, setViewMode] = useState('edit'); // 'edit' or 'preview'
   
   const clientInputRef = useRef(null);
   const lookInputRef = useRef(null);
@@ -65,7 +66,122 @@ const PeridotLookbookCreator = () => {
   };
 
   const currentLook = looks[currentLookIndex];
+  const completedLooks = looks.filter(look => look.images.length > 0 || look.description);
 
+  // PREVIEW MODE
+  if (viewMode === 'preview') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-yellow-50">
+        {/* Preview Navigation */}
+        <div className="bg-white shadow-sm border-b sticky top-0 z-10">
+          <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+            <button
+              onClick={() => setViewMode('edit')}
+              className="flex items-center gap-2 px-4 py-2 text-amber-700 hover:text-amber-900"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Edit
+            </button>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Crown className="w-5 h-5 text-amber-600" />
+                <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                  PERIDOT IMAGES
+                </h1>
+              </div>
+              <p className="text-sm text-amber-700">{completedLooks.length} slides ready</p>
+            </div>
+            <div className="text-sm text-amber-600">
+              Export coming next!
+            </div>
+          </div>
+        </div>
+
+        {/* Slide Navigation */}
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <div className="flex gap-2 mb-6 overflow-x-auto">
+            {completedLooks.map((look, index) => (
+              <button
+                key={look.id}
+                onClick={() => setCurrentLookIndex(looks.findIndex(l => l.id === look.id))}
+                className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-all ${
+                  looks.findIndex(l => l.id === look.id) === currentLookIndex
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
+                    : 'bg-white text-amber-700 hover:bg-amber-50 border border-amber-200'
+                }`}
+              >
+                {look.title}
+              </button>
+            ))}
+          </div>
+
+          {/* Current Slide Preview */}
+          {completedLooks.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-amber-200">
+              <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white p-6 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Crown className="w-6 h-6" />
+                  <h1 className="text-2xl font-bold">PERIDOT IMAGES</h1>
+                </div>
+                <h2 className="text-xl">{currentLook.title}</h2>
+              </div>
+
+              <div className="p-8 bg-gradient-to-br from-amber-50 to-yellow-50">
+                {/* Client Reference */}
+                {clientImage && (
+                  <div className="mb-8 text-center">
+                    <h3 className="text-lg font-semibold text-amber-800 mb-4">Your Inspiration</h3>
+                    <div className="max-w-sm mx-auto">
+                      <img src={clientImage} alt="Client reference" className="w-full rounded-xl shadow-lg border-4 border-white" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Look Description */}
+                {currentLook.description && (
+                  <div className="mb-8 text-center">
+                    <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-amber-200">
+                      <h3 className="text-lg font-semibold text-amber-800 mb-3">The Vision</h3>
+                      <p className="text-amber-900 leading-relaxed">{currentLook.description}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inspiration Images */}
+                {currentLook.images.length > 0 && (
+                  <div>
+                    <h3 className="text-xl font-semibold text-amber-800 mb-6 text-center">Style Inspiration</h3>
+                    <div className="space-y-6">
+                      {currentLook.images.map((img) => (
+                        <div key={img.id} className="bg-white/60 rounded-xl p-6 shadow-lg border border-amber-200">
+                          <img src={img.src} alt="Style inspiration" className="w-full max-h-80 object-contain rounded-lg mx-auto" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Watermark */}
+                <div className="text-center mt-8 text-amber-600/60 text-sm">
+                  © Peridot Images - Exclusive Style Curation
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {completedLooks.length === 0 && (
+            <div className="text-center py-16 text-amber-500">
+              <Crown className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <p className="text-lg">Create some looks to see your professional preview!</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // EDIT MODE (existing code)
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       <div className="bg-white shadow-sm border-b">
@@ -88,6 +204,15 @@ const PeridotLookbookCreator = () => {
                 placeholder="Client name..."
                 className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
+              {completedLooks.length > 0 && (
+                <button
+                  onClick={() => setViewMode('preview')}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg hover:from-amber-600 hover:to-yellow-600 shadow-lg"
+                >
+                  <Eye className="w-4 h-4" />
+                  Preview & Export
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -211,12 +336,6 @@ const PeridotLookbookCreator = () => {
                       ))}
                     </div>
                   )}
-                </div>
-
-                <div className="text-center py-8 bg-amber-50 rounded-lg border border-amber-200">
-                  <Crown className="w-12 h-12 mx-auto mb-4 text-amber-400" />
-                  <h3 className="text-lg font-semibold text-amber-800 mb-2">{currentLook.title}</h3>
-                  <p className="text-amber-600">Coming next: Preview mode and export!</p>
                 </div>
               </div>
             </div>
