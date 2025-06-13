@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Plus, Download, Eye, Camera, Sparkles, ArrowLeft, Crown } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 const PeridotLookbookCreator = () => {
   const [clientImage, setClientImage] = useState(null);
@@ -67,7 +68,6 @@ const PeridotLookbookCreator = () => {
 
   const exportCurrentSlide = async () => {
     try {
-      const html2canvas = (await import('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')).default;
       const element = document.getElementById(`export-slide-${currentLook.id}`);
       if (!element) return;
 
@@ -94,7 +94,6 @@ const PeridotLookbookCreator = () => {
     if (completedLooks.length === 0) return;
 
     try {
-      const html2canvas = (await import('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')).default;
       const coverElement = document.getElementById('export-cover');
       if (coverElement) {
         const coverCanvas = await html2canvas(coverElement, {
