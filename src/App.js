@@ -74,35 +74,38 @@ const PeridotLookbookCreator = () => {
         return;
       }
 
-      // Show loading message
-      const originalText = element.textContent;
-      
       const canvas = await html2canvas(element, {
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
         allowTaint: false,
         width: 800,
-        height: 1200,
-        scrollX: 0,
-        scrollY: 0
+        height: 1200
       });
       
-      // Create download link
-      const link = document.createElement('a');
-      link.download = `Peridot-Images-${currentLook.title.replace(/\s+/g, '-')}-${clientName || 'Client'}.png`;
-      link.href = canvas.toDataURL('image/png');
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      alert('✨ Slide exported successfully to your Downloads folder!');
+      // Convert to blob for better browser compatibility
+      canvas.toBlob(function(blob) {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        link.href = url;
+        link.download = `Peridot-Images-${currentLook.title.replace(/\s+/g, '-')}-${clientName || 'Client'}.png`;
+        
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+        
+        alert('✨ File downloaded! Check your Downloads folder for: ' + link.download);
+      }, 'image/png');
       
     } catch (error) {
       console.error('Export error:', error);
-      alert('Export is processing... If this continues, try refreshing the page and trying again.');
+      alert('Export failed. Try right-clicking on the preview and "Save image as..." instead.');
     }
   };
 
@@ -114,7 +117,7 @@ const PeridotLookbookCreator = () => {
       return;
     }
 
-    alert(`🎉 Starting export of ${completedLooks.length} slides...\n\nEach slide will download automatically to your Downloads folder.\n\nFiles will be named: Peridot-Images-Look-Name-${clientName || 'Client'}.png`);
+    alert(`🎉 Starting export of ${completedLooks.length} slides...\n\nEach slide will download automatically to your Downloads folder.`);
 
     // Export each slide with a delay
     for (let i = 0; i < completedLooks.length; i++) {
@@ -132,16 +135,24 @@ const PeridotLookbookCreator = () => {
             height: 1200
           });
           
-          const link = document.createElement('a');
-          link.download = `Peridot-Images-${look.title.replace(/\s+/g, '-')}-${clientName || 'Client'}.png`;
-          link.href = canvas.toDataURL('image/png');
-          
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          canvas.toBlob(function(blob) {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = url;
+            link.download = `Peridot-Images-${look.title.replace(/\s+/g, '-')}-${clientName || 'Client'}.png`;
+            
+            document.body.appendChild(link);
+            link.click();
+            
+            setTimeout(() => {
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+            }, 100);
+          }, 'image/png');
           
           // Small delay between downloads
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
           
         } catch (error) {
           console.error(`Error exporting ${look.title}:`, error);
