@@ -37,6 +37,12 @@ const PeridotLookbookCreator = () => {
     });
   };
 
+  const updateLookDescription = (description) => {
+    const newLooks = [...looks];
+    newLooks[currentLookIndex].description = description;
+    setLooks(newLooks);
+  };
+
   const addNewLook = () => {
     const newLook = {
       id: Date.now(),
@@ -173,10 +179,15 @@ const PeridotLookbookCreator = () => {
                   />
                 </div>
 
-                <div className="text-center py-8 bg-amber-50 rounded-lg border border-amber-200">
-                  <Sparkles className="w-12 h-12 mx-auto mb-4 text-amber-400" />
-                  <h3 className="text-lg font-semibold text-amber-800 mb-2">Working on: {currentLook.title}</h3>
-                  <p className="text-amber-600">Coming next: descriptions and export!</p>
+                <div>
+                  <label className="block text-sm font-medium text-amber-800 mb-2">Description & Vision</label>
+                  <textarea
+                    value={currentLook.description}
+                    onChange={(e) => updateLookDescription(e.target.value)}
+                    placeholder="Describe this look... What's the vibe? Outdoor casual with boots? Retro vintage elegance? What pieces, colors, textures are you thinking?"
+                    rows={6}
+                    className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
                 </div>
               </div>
 
@@ -200,6 +211,12 @@ const PeridotLookbookCreator = () => {
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className="text-center py-8 bg-amber-50 rounded-lg border border-amber-200">
+                  <Crown className="w-12 h-12 mx-auto mb-4 text-amber-400" />
+                  <h3 className="text-lg font-semibold text-amber-800 mb-2">{currentLook.title}</h3>
+                  <p className="text-amber-600">Coming next: Preview mode and export!</p>
                 </div>
               </div>
             </div>
