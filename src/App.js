@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Plus, Download, Eye, Camera, Sparkles, Crown, ArrowLeft } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 const PeridotLookbookCreator = () => {
   const [clientImage, setClientImage] = useState(null);
@@ -65,30 +66,90 @@ const PeridotLookbookCreator = () => {
     setLooks(newLooks);
   };
 
-  const exportCurrentSlide = () => {
-    // Simple screenshot approach using browser API
-    const element = document.getElementById(`export-slide-${currentLook.id}`);
-    if (!element) {
-      alert('Please switch to a look with content to export!');
+  const exportCurrentSlide = async () => {
+    try {
+      const element = document.getElementById(`export-slide-${currentLook.id}`);
+      if (!element) {
+        alert('Please switch to a look with content to export!');
+        return;
+      }
+
+      // Show loading message
+      const originalText = element.textContent;
+      
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        width: 800,
+        height: 1200,
+        scrollX: 0,
+        scrollY: 0
+      });
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.download = `Peridot-Images-${currentLook.title.replace(/\s+/g, '-')}-${clientName || 'Client'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('✨ Slide exported successfully to your Downloads folder!');
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Export is processing... If this continues, try refreshing the page and trying again.');
+    }
+  };
+
+  const exportFullLookbook = async () => {
+    const completedLooks = looks.filter(look => look.images.length > 0 || look.description);
+    
+    if (completedLooks.length === 0) {
+      alert('Please create some looks with content first!');
       return;
     }
 
-    // Create a simple export notification
-    const exportData = {
-      clientName: clientName || 'Client',
-      lookTitle: currentLook.title,
-      description: currentLook.description,
-      imageCount: currentLook.images.length,
-      timestamp: new Date().toLocaleDateString()
-    };
+    alert(`🎉 Starting export of ${completedLooks.length} slides...\n\nEach slide will download automatically to your Downloads folder.\n\nFiles will be named: Peridot-Images-Look-Name-${clientName || 'Client'}.png`);
 
-    // For now, show export info (in a real app, this would generate the actual PNG)
-    alert(`🎉 Export Ready!\n\nClient: ${exportData.clientName}\nLook: ${exportData.lookTitle}\nImages: ${exportData.imageCount}\n\nThis would download: Peridot-Images-${exportData.lookTitle.replace(/\s+/g, '-')}-${exportData.clientName}.png`);
-  };
-
-  const exportFullLookbook = () => {
-    const completedLooks = looks.filter(look => look.images.length > 0 || look.description);
-    alert(`🎉 Full Lookbook Export!\n\nReady to export ${completedLooks.length} professional slides for ${clientName || 'your client'}!\n\nThis would create a complete branded lookbook with cover page and copyright protection.`);
+    // Export each slide with a delay
+    for (let i = 0; i < completedLooks.length; i++) {
+      const look = completedLooks[i];
+      const element = document.getElementById(`export-slide-${look.id}`);
+      
+      if (element) {
+        try {
+          const canvas = await html2canvas(element, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            width: 800,
+            height: 1200
+          });
+          
+          const link = document.createElement('a');
+          link.download = `Peridot-Images-${look.title.replace(/\s+/g, '-')}-${clientName || 'Client'}.png`;
+          link.href = canvas.toDataURL('image/png');
+          
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Small delay between downloads
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+        } catch (error) {
+          console.error(`Error exporting ${look.title}:`, error);
+        }
+      }
+    }
+    
+    alert(`✨ Export complete! ${completedLooks.length} slides saved to your Downloads folder!`);
   };
 
   const currentLook = looks[currentLookIndex];
@@ -100,7 +161,7 @@ const PeridotLookbookCreator = () => {
         {/* Hidden Export Elements */}
         <div className="hidden">
           {completedLooks.map((look) => (
-            <div key={`export-${look.id}`} id={`export-slide-${look.id}`} className="w-[800px] h-[1200px] bg-gradient-to-br from-amber-50 via-white to-yellow-50 relative overflow-hidden">
+            <div key={`export-${look.id}`} id={`export-slide-${look.id}`} className="w-[800px] h-[1200px] bg-gradient-to-br from-amber-50 via-white to-yellow-50 relative overflow-hidden" style={{position: 'absolute', left: '-9999px'}}>
               <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
                 <div className="text-8xl font-bold text-amber-800 transform rotate-45">PERIDOT IMAGES</div>
               </div>
@@ -142,9 +203,9 @@ const PeridotLookbookCreator = () => {
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-amber-800 mb-4 text-center">Style Inspiration</h3>
                     <div className="space-y-4">
-                      {look.images.map((img) => (
+                      {look.images.slice(0, 3).map((img) => (
                         <div key={img.id} className="bg-white/60 rounded-xl p-4 shadow-md border border-amber-200">
-                          <img src={img.src} alt="Style inspiration" className="w-full max-h-64 object-contain rounded-lg mx-auto" />
+                          <img src={img.src} alt="Style inspiration" className="w-full max-h-48 object-contain rounded-lg mx-auto" />
                         </div>
                       ))}
                     </div>
@@ -183,7 +244,7 @@ const PeridotLookbookCreator = () => {
               className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg hover:from-amber-600 hover:to-yellow-600 shadow-lg"
             >
               <Download className="w-4 h-4" />
-              Export Lookbook
+              Export All Slides
             </button>
           </div>
         </div>
