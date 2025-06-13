@@ -426,7 +426,7 @@ const PeridotLookbookCreator = () => {
         {/* Hidden Export Elements */}
         <div className="fixed left-[-10000px] top-0">
           {completedLooks.map((look) => (
-            <div key={`export-${look.id}`} id={`export-slide-${look.id}`} className="w-[800px] h-[1200px] bg-gradient-to-br from-amber-50 via-white to-yellow-50 relative overflow-hidden" style={{fontFamily: 'Arial, Helvetica, sans-serif'}}>
+            <div key={`export-${look.id}`} id={`export-slide-${look.id}`} className="w-[800px] h-[1400px] bg-gradient-to-br from-amber-50 via-white to-yellow-50 relative overflow-hidden" style={{fontFamily: 'Arial, Helvetica, sans-serif'}}>
               {/* Background watermark */}
               <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
                 <div className="text-8xl font-bold text-amber-800 transform rotate-45">PERIDOT IMAGES</div>
@@ -466,14 +466,14 @@ const PeridotLookbookCreator = () => {
                   </div>
                 )}
 
-                {/* Style Images - IDENTICAL TO CLIENT IMAGE! */}
+                {/* Style Images - SMALLER TO FIT PROPERLY! */}
                 {look.images.length > 0 && (
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-amber-800 mb-4 text-center">Style Inspiration</h3>
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                       {look.images.slice(0, 2).map((img) => (
-                        <div key={img.id} className="mb-8 text-center">
-                          <div className="max-w-80 mx-auto">
+                        <div key={img.id} className="mb-6 text-center">
+                          <div className="max-w-72 mx-auto">
                             <img 
                               src={img.src} 
                               alt="Style inspiration" 
