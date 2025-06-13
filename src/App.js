@@ -10,6 +10,7 @@ const PeridotLookbookCreator = () => {
   const [clientName, setClientName] = useState('');
   
   const clientInputRef = useRef(null);
+  const lookInputRef = useRef(null);
 
   const handleClientImageUpload = (event) => {
     const file = event.target.files[0];
@@ -18,6 +19,22 @@ const PeridotLookbookCreator = () => {
       reader.onload = (e) => setClientImage(e.target.result);
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleLookImageUpload = (event) => {
+    const files = Array.from(event.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newLooks = [...looks];
+        newLooks[currentLookIndex].images.push({
+          id: Date.now() + Math.random(),
+          src: e.target.result
+        });
+        setLooks(newLooks);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const addNewLook = () => {
@@ -143,24 +160,58 @@ const PeridotLookbookCreator = () => {
             </div>
 
             {/* Current Look Editor */}
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-amber-800 mb-2">Look Title</label>
-                <input
-                  type="text"
-                  value={currentLook.title}
-                  onChange={(e) => updateLookTitle(e.target.value)}
-                  className="w-full px-4 py-3 text-lg font-semibold border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  placeholder="e.g., Casual Blue Outdoor Look, Vintage Red Dress Vibe..."
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-amber-800 mb-2">Look Title</label>
+                  <input
+                    type="text"
+                    value={currentLook.title}
+                    onChange={(e) => updateLookTitle(e.target.value)}
+                    className="w-full px-4 py-3 text-lg font-semibold border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="e.g., Casual Blue Outdoor Look, Vintage Red Dress Vibe..."
+                  />
+                </div>
+
+                <div className="text-center py-8 bg-amber-50 rounded-lg border border-amber-200">
+                  <Sparkles className="w-12 h-12 mx-auto mb-4 text-amber-400" />
+                  <h3 className="text-lg font-semibold text-amber-800 mb-2">Working on: {currentLook.title}</h3>
+                  <p className="text-amber-600">Coming next: descriptions and export!</p>
+                </div>
               </div>
 
-              <div className="text-center py-8 bg-amber-50 rounded-lg border border-amber-200">
-                <Sparkles className="w-12 h-12 mx-auto mb-4 text-amber-400" />
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">Working on: {currentLook.title}</h3>
-                <p className="text-amber-600">More features coming soon: inspiration images, descriptions, and export!</p>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-amber-800 mb-2">Inspiration Images</label>
+                  <button
+                    onClick={() => lookInputRef.current?.click()}
+                    className="w-full px-4 py-4 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors flex items-center justify-center gap-2 font-medium border-2 border-dashed border-amber-300"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Add Inspiration for {currentLook.title}
+                  </button>
+                  
+                  {currentLook.images.length > 0 && (
+                    <div className="mt-4 space-y-4">
+                      {currentLook.images.map((img) => (
+                        <div key={img.id} className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                          <img src={img.src} alt="Inspiration" className="w-full max-h-64 object-contain rounded mx-auto shadow-md" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+            
+            <input
+              ref={lookInputRef}
+              type="file"
+              onChange={handleLookImageUpload}
+              accept="image/*"
+              multiple
+              className="hidden"
+            />
           </div>
         </div>
       </div>
