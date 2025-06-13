@@ -70,42 +70,26 @@ const PeridotLookbookCreator = () => {
     try {
       const element = document.getElementById(`export-slide-${currentLook.id}`);
       if (!element) {
-        alert('Please switch to a look with content to export!');
+        alert('No slide to export! Add some content first.');
         return;
       }
 
       const canvas = await html2canvas(element, {
         backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        width: 800,
-        height: 1200
+        scale: 2
       });
       
-      // Convert to blob for better browser compatibility
-      canvas.toBlob(function(blob) {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.style.display = 'none';
-        link.href = url;
-        link.download = `Peridot-Images-${currentLook.title.replace(/\s+/g, '-')}-${clientName || 'Client'}.png`;
-        
-        document.body.appendChild(link);
-        link.click();
-        
-        // Clean up
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        }, 100);
-        
-        alert('✨ File downloaded! Check your Downloads folder for: ' + link.download);
-      }, 'image/png');
+      // Create download - SIMPLEST method
+      const dataURL = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataURL;
+      link.download = `Peridot-${currentLook.title}-${Date.now()}.png`;
+      link.click();
+      
+      alert('Download started! Check your Downloads folder.');
       
     } catch (error) {
-      console.error('Export error:', error);
-      alert('Export failed. Try right-clicking on the preview and "Save image as..." instead.');
+      alert('Export failed - try right-clicking the slide and "Save as image"');
     }
   };
 
@@ -117,9 +101,8 @@ const PeridotLookbookCreator = () => {
       return;
     }
 
-    alert(`🎉 Starting export of ${completedLooks.length} slides...\n\nEach slide will download automatically to your Downloads folder.`);
+    alert(`Starting export of ${completedLooks.length} slides...`);
 
-    // Export each slide with a delay
     for (let i = 0; i < completedLooks.length; i++) {
       const look = completedLooks[i];
       const element = document.getElementById(`export-slide-${look.id}`);
@@ -128,31 +111,16 @@ const PeridotLookbookCreator = () => {
         try {
           const canvas = await html2canvas(element, {
             backgroundColor: '#ffffff',
-            scale: 2,
-            useCORS: true,
-            allowTaint: false,
-            width: 800,
-            height: 1200
+            scale: 2
           });
           
-          canvas.toBlob(function(blob) {
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.style.display = 'none';
-            link.href = url;
-            link.download = `Peridot-Images-${look.title.replace(/\s+/g, '-')}-${clientName || 'Client'}.png`;
-            
-            document.body.appendChild(link);
-            link.click();
-            
-            setTimeout(() => {
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(url);
-            }, 100);
-          }, 'image/png');
+          const dataURL = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = dataURL;
+          link.download = `Peridot-${look.title}-${Date.now()}.png`;
+          link.click();
           
-          // Small delay between downloads
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
         } catch (error) {
           console.error(`Error exporting ${look.title}:`, error);
@@ -160,7 +128,7 @@ const PeridotLookbookCreator = () => {
       }
     }
     
-    alert(`✨ Export complete! ${completedLooks.length} slides saved to your Downloads folder!`);
+    alert(`Export complete! ${completedLooks.length} slides should be in Downloads folder!`);
   };
 
   const currentLook = looks[currentLookIndex];
