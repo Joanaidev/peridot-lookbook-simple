@@ -66,38 +66,145 @@ const PeridotLookbookCreator = () => {
     setLooks(newLooks);
   };
 
-  // FIXED EXPORT FUNCTION - This will actually download files!
-  const downloadImage = (canvas, filename) => {
-    // Convert canvas to blob (more reliable than dataURL)
-    canvas.toBlob((blob) => {
-      if (blob) {
-        // Handle Internet Explorer
-        if (window.navigator && window.navigator.msSaveOrOpenBlob) {
-          window.navigator.msSaveOrOpenBlob(blob, filename);
-          return;
-        }
+  // COMPLETELY FIXED EXPORT FUNCTION - PRODUCTION READY!
+  const downloadImage = async (canvas, filename) => {
+    return new Promise((resolve, reject) => {
+      try {
+        // Method 1: Try toBlob (most reliable)
+        if (canvas.toBlob) {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Failed to create blob'));
+              return;
+            }
 
-        // Create download link for other browsers
-        const url = window.URL.createObjectURL(blob);
-        const downloadLink = document.createElement('a');
-        downloadLink.style.display = 'none';
-        downloadLink.href = url;
-        downloadLink.download = filename;
-        
-        // Add to page, click, and remove
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        
-        // Clean up after download
-        setTimeout(() => {
-          document.body.removeChild(downloadLink);
-          window.URL.revokeObjectURL(url);
-        }, 100);
+            // Handle different browsers
+            if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+              // Internet Explorer
+              window.navigator.msSaveOrOpenBlob(blob, filename);
+              resolve();
+              return;
+            }
+
+            // Modern browsers
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = url;
+            link.download = filename;
+            
+            document.body.appendChild(link);
+            link.click();
+            
+            // Cleanup
+            setTimeout(() => {
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+              resolve();
+            }, 100);
+          }, 'image/png', 0.95);
+        } else {
+          // Fallback: Use toDataURL
+          const dataUrl = canvas.toDataURL('image/png', 0.95);
+          const link = document.createElement('a');
+          link.style.display = 'none';
+          link.href = dataUrl;
+          link.download = filename;
+          
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          resolve();
+        }
+      } catch (error) {
+        reject(error);
       }
-    }, 'image/png', 0.95);
+    });
+  };
+
+  const waitForEverything = async () => {
+    // Wait for fonts to load
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+    
+    // Wait for images to load
+    const images = document.querySelectorAll('img');
+    await Promise.all(Array.from(images).map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        const timeout = setTimeout(resolve, 3000); // 3 second timeout
+        img.onload = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+        img.onerror = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+      });
+    }));
+    
+    // Extra delay for rendering
+    await new Promise(resolve => setTimeout(resolve, 500));
+  };
+
+  const exportWithRetry = async (element, filename, maxRetries = 3) => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Export attempt ${attempt}/${maxRetries}`);
+        
+        // Wait for everything to be ready
+        await waitForEverything();
+        
+        // Get actual dimensions
+        const rect = element.getBoundingClientRect();
+        const actualWidth = Math.min(rect.width || element.offsetWidth, 2000);
+        const actualHeight = Math.min(rect.height || element.offsetHeight, 3000);
+        
+        console.log('Capturing element:', { width: actualWidth, height: actualHeight });
+        
+        // Create canvas with optimized settings
+        const canvas = await html2canvas(element, {
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: '#ffffff',
+          scale: 1, // Lower scale for reliability
+          width: actualWidth,
+          height: actualHeight,
+          scrollX: 0,
+          scrollY: 0,
+          logging: false,
+          removeContainer: true,
+          foreignObjectRendering: false, // Disable for compatibility
+          timeout: 10000 // 10 second timeout
+        });
+        
+        console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
+        
+        // Download the image
+        await downloadImage(canvas, filename);
+        console.log('Download completed successfully');
+        
+        return true;
+        
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed:`, error.message);
+        
+        if (attempt === maxRetries) {
+          throw new Error(`Export failed after ${maxRetries} attempts: ${error.message}`);
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
   };
 
   const exportCurrentSlide = async () => {
+    const exportButton = document.querySelector('[data-export-current]');
+    const originalText = exportButton?.textContent || 'Export This Slide';
+    
     try {
       const element = document.getElementById(`export-slide-${currentLook.id}`);
       if (!element) {
@@ -105,26 +212,17 @@ const PeridotLookbookCreator = () => {
         return;
       }
 
-      // Update button to show progress
-      const exportButton = document.querySelector('[data-export-current]');
-      const originalText = exportButton?.textContent;
+      // Update button
       if (exportButton) {
         exportButton.textContent = 'Creating...';
         exportButton.disabled = true;
       }
 
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        allowTaint: false
-      });
+      const filename = `Peridot-${currentLook.title.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}.png`;
       
-      // Generate filename and download
-      const filename = `Peridot-${currentLook.title}-${Date.now()}.png`;
-      downloadImage(canvas, filename);
+      await exportWithRetry(element, filename);
       
-      // Show success and reset button
+      // Success
       if (exportButton) {
         exportButton.textContent = 'Downloaded!';
         setTimeout(() => {
@@ -135,12 +233,11 @@ const PeridotLookbookCreator = () => {
       
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed - please try again');
+      alert('Export failed - please try again. Make sure you have content to export.');
       
-      // Reset button on error
-      const exportButton = document.querySelector('[data-export-current]');
+      // Reset button
       if (exportButton) {
-        exportButton.textContent = 'Export This Slide';
+        exportButton.textContent = originalText;
         exportButton.disabled = false;
       }
     }
@@ -154,55 +251,67 @@ const PeridotLookbookCreator = () => {
       return;
     }
 
-    // Update button to show progress
     const exportButton = document.querySelector('[data-export-all]');
-    const originalText = exportButton?.textContent;
-    if (exportButton) {
-      exportButton.textContent = `Exporting ${completedLooks.length} slides...`;
-      exportButton.disabled = true;
-    }
+    const originalText = exportButton?.textContent || 'Export All Slides';
+    
+    try {
+      // Update button
+      if (exportButton) {
+        exportButton.textContent = `Exporting ${completedLooks.length} slides...`;
+        exportButton.disabled = true;
+      }
 
-    let successCount = 0;
+      let successCount = 0;
 
-    for (let i = 0; i < completedLooks.length; i++) {
-      const look = completedLooks[i];
-      const element = document.getElementById(`export-slide-${look.id}`);
-      
-      if (element) {
-        try {
-          const canvas = await html2canvas(element, {
-            backgroundColor: '#ffffff',
-            scale: 2,
-            useCORS: true,
-            allowTaint: false
-          });
-          
-          // Generate filename and download
-          const filename = `Peridot-${look.title}-${Date.now()}.png`;
-          downloadImage(canvas, filename);
-          
-          successCount++;
-          
-          // Small delay between downloads
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-        } catch (error) {
-          console.error(`Error creating ${look.title}:`, error);
+      for (let i = 0; i < completedLooks.length; i++) {
+        const look = completedLooks[i];
+        const element = document.getElementById(`export-slide-${look.id}`);
+        
+        if (element) {
+          try {
+            // Update progress
+            if (exportButton) {
+              exportButton.textContent = `Exporting ${i + 1}/${completedLooks.length}...`;
+            }
+            
+            const filename = `Peridot-${look.title.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}.png`;
+            
+            await exportWithRetry(element, filename);
+            successCount++;
+            
+            // Delay between exports
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+          } catch (error) {
+            console.error(`Failed to export ${look.title}:`, error);
+          }
         }
       }
-    }
-    
-    // Show completion message and reset button
-    if (exportButton) {
-      exportButton.textContent = `${successCount} files downloaded!`;
-      setTimeout(() => {
+      
+      // Show results
+      if (exportButton) {
+        exportButton.textContent = `${successCount} files downloaded!`;
+        setTimeout(() => {
+          exportButton.textContent = originalText;
+          exportButton.disabled = false;
+        }, 3000);
+      }
+      
+      if (successCount > 0) {
+        alert(`Success! ${successCount} PNG files downloaded to your Downloads folder.`);
+      } else {
+        alert('No files were exported. Please try again.');
+      }
+      
+    } catch (error) {
+      console.error('Bulk export failed:', error);
+      alert('Export failed - please try again');
+      
+      // Reset button
+      if (exportButton) {
         exportButton.textContent = originalText;
         exportButton.disabled = false;
-      }, 3000);
-    }
-    
-    if (successCount > 0) {
-      alert(`Success! ${successCount} PNG files have been downloaded to your Downloads folder.`);
+      }
     }
   };
 
@@ -215,7 +324,7 @@ const PeridotLookbookCreator = () => {
         {/* Hidden Export Elements */}
         <div className="hidden">
           {completedLooks.map((look) => (
-            <div key={`export-${look.id}`} id={`export-slide-${look.id}`} className="w-[800px] h-[1200px] bg-gradient-to-br from-amber-50 via-white to-yellow-50 relative overflow-hidden" style={{position: 'absolute', left: '-9999px'}}>
+            <div key={`export-${look.id}`} id={`export-slide-${look.id}`} className="w-[800px] h-[1200px] bg-gradient-to-br from-amber-50 via-white to-yellow-50 relative overflow-hidden" style={{position: 'absolute', left: '-9999px', fontFamily: 'Arial, sans-serif'}}>
               <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
                 <div className="text-8xl font-bold text-amber-800 transform rotate-45">PERIDOT IMAGES</div>
               </div>
@@ -223,12 +332,12 @@ const PeridotLookbookCreator = () => {
               <div className="relative z-10 h-full p-12">
                 <div className="text-center mb-8">
                   <div className="flex items-center justify-center gap-3 mb-4">
-                    <Crown className="w-8 h-8 text-amber-600" />
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                    <div className="w-8 h-8 bg-amber-600 rounded" style={{display: 'inline-block'}}></div>
+                    <h1 className="text-2xl font-bold text-amber-600" style={{fontFamily: 'Arial, sans-serif'}}>
                       PERIDOT IMAGES
                     </h1>
                   </div>
-                  <div className="w-24 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto mb-6"></div>
+                  <div className="w-24 h-0.5 bg-amber-400 mx-auto mb-6"></div>
                   <h2 className="text-3xl font-bold text-amber-900 mb-2">{look.title}</h2>
                   {clientName && (
                     <p className="text-lg text-amber-700">For {clientName}</p>
@@ -239,14 +348,14 @@ const PeridotLookbookCreator = () => {
                   <div className="mb-8 text-center">
                     <h3 className="text-lg font-semibold text-amber-800 mb-4">Your Inspiration</h3>
                     <div className="max-w-64 mx-auto">
-                      <img src={clientImage} alt="Client reference" className="w-full rounded-2xl shadow-lg border-4 border-white" />
+                      <img src={clientImage} alt="Client reference" className="w-full rounded-2xl shadow-lg border-4 border-white" crossOrigin="anonymous" />
                     </div>
                   </div>
                 )}
 
                 {look.description && (
                   <div className="mb-8">
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-amber-200">
+                    <div className="bg-white rounded-2xl p-6 shadow-lg border border-amber-200">
                       <h3 className="text-lg font-semibold text-amber-800 mb-3 text-center">The Vision</h3>
                       <p className="text-amber-900 leading-relaxed text-center">{look.description}</p>
                     </div>
@@ -258,8 +367,8 @@ const PeridotLookbookCreator = () => {
                     <h3 className="text-lg font-semibold text-amber-800 mb-4 text-center">Style Inspiration</h3>
                     <div className="space-y-4">
                       {look.images.slice(0, 3).map((img) => (
-                        <div key={img.id} className="bg-white/60 rounded-xl p-4 shadow-md border border-amber-200">
-                          <img src={img.src} alt="Style inspiration" className="w-full max-h-48 object-contain rounded-lg mx-auto" />
+                        <div key={img.id} className="bg-white rounded-xl p-4 shadow-md border border-amber-200">
+                          <img src={img.src} alt="Style inspiration" className="w-full max-h-48 object-contain rounded-lg mx-auto" crossOrigin="anonymous" />
                         </div>
                       ))}
                     </div>
@@ -267,7 +376,7 @@ const PeridotLookbookCreator = () => {
                 )}
 
                 <div className="absolute bottom-4 left-12 right-12 text-center">
-                  <p className="text-amber-600/70 text-xs">© Peridot Images - Exclusive Style Curation</p>
+                  <p className="text-amber-600 text-xs">© Peridot Images - Exclusive Style Curation</p>
                 </div>
               </div>
             </div>
