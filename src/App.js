@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Plus, Download, Eye, Camera, Sparkles, Crown, ArrowLeft } from 'lucide-react';
-import { toPng } from 'html-to-image';
+import html2canvas from 'html2canvas';
 
 const PeridotLookbookCreator = () => {
   const [clientImage, setClientImage] = useState(null);
@@ -66,168 +66,199 @@ const PeridotLookbookCreator = () => {
     setLooks(newLooks);
   };
 
-  // BULLETPROOF DOWNLOAD FUNCTION - WILL ACTUALLY DOWNLOAD!
-  const downloadImage = (dataUrl, filename) => {
+  // BULLETPROOF DOWNLOAD FUNCTION
+  const downloadImage = (canvas, filename) => {
     return new Promise((resolve) => {
       try {
-        // Convert data URL to blob
-        const byteCharacters = atob(dataUrl.split(',')[1]);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'image/png' });
+        console.log('🎯 Starting download for:', filename);
         
-        // Create download link
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.style.position = 'fixed';
-        link.style.top = '0';
-        link.style.left = '0';
-        link.style.opacity = '0';
-        link.style.pointerEvents = 'none';
-        
-        // Add to DOM and force click
-        document.body.appendChild(link);
-        
-        // FORCE THE DOWNLOAD - Multiple methods
-        setTimeout(() => {
-          // Method 1: Direct click
-          link.click();
-          
-          // Method 2: Dispatch click event
-          const clickEvent = new MouseEvent('click', {
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            buttons: 1
-          });
-          link.dispatchEvent(clickEvent);
-          
-          // Method 3: Manual trigger
-          if (link.click) {
-            link.click();
+        // Method 1: Canvas to Blob (MOST RELIABLE!)
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = filename;
+            downloadLink.style.display = 'none';
+            
+            document.body.appendChild(downloadLink);
+            
+            // FORCE DOWNLOAD with multiple methods
+            setTimeout(() => {
+              // Primary click
+              downloadLink.click();
+              
+              // Backup click event
+              const clickEvent = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+              });
+              downloadLink.dispatchEvent(clickEvent);
+              
+              console.log('✅ Download triggered!');
+              
+              // Cleanup
+              setTimeout(() => {
+                if (document.body.contains(downloadLink)) {
+                  document.body.removeChild(downloadLink);
+                }
+                URL.revokeObjectURL(url);
+              }, 2000);
+              
+              resolve(true);
+            }, 200);
+          } else {
+            console.error('Blob creation failed, trying fallback');
+            fallbackDownload();
           }
-          
-          // Cleanup after download
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+        }, 'image/png', 1.0);
+        
+        // Fallback if blob fails
+        function fallbackDownload() {
+          try {
+            const dataUrl = canvas.toDataURL('image/png', 1.0);
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename;
+            link.style.display = 'none';
+            
+            document.body.appendChild(link);
+            link.click();
+            
+            setTimeout(() => {
+              if (document.body.contains(link)) {
+                document.body.removeChild(link);
+              }
+            }, 1000);
+            
             resolve(true);
-          }, 1000);
-        }, 100);
+          } catch (error) {
+            console.error('Fallback failed, opening manual download');
+            openManualDownload();
+          }
+        }
+        
+        // Manual download window
+        function openManualDownload() {
+          try {
+            const dataUrl = canvas.toDataURL('image/png');
+            const newWindow = window.open('', '_blank');
+            
+            newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>Download ${filename}</title>
+                  <style>
+                    body { 
+                      font-family: Arial, sans-serif; 
+                      background: linear-gradient(135deg, #fef3c7, #fbbf24);
+                      min-height: 100vh;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      margin: 0;
+                      padding: 20px;
+                    }
+                    .container {
+                      background: white;
+                      padding: 40px;
+                      border-radius: 20px;
+                      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                      text-align: center;
+                      max-width: 800px;
+                    }
+                    h1 { color: #d97706; font-size: 2rem; margin-bottom: 20px; }
+                    img { 
+                      max-width: 100%; 
+                      border: 4px solid #d97706; 
+                      border-radius: 12px; 
+                      margin: 20px 0;
+                    }
+                    .download-btn {
+                      background: linear-gradient(135deg, #d97706, #f59e0b);
+                      color: white;
+                      padding: 15px 30px;
+                      border: none;
+                      border-radius: 12px;
+                      font-size: 18px;
+                      font-weight: bold;
+                      cursor: pointer;
+                      margin: 10px;
+                      text-decoration: none;
+                      display: inline-block;
+                    }
+                    .download-btn:hover { transform: translateY(-2px); }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <h1>🎉 Download Your Peridot Image</h1>
+                    <p><strong>${filename}</strong></p>
+                    <img src="${dataUrl}" alt="Your lookbook" />
+                    <div>
+                      <a href="${dataUrl}" download="${filename}" class="download-btn">📥 DOWNLOAD</a>
+                      <button onclick="forceDownload()" class="download-btn">💾 FORCE SAVE</button>
+                    </div>
+                    <p style="margin-top: 20px; color: #78350f;">Right-click image → Save As... if buttons don't work</p>
+                  </div>
+                  <script>
+                    function forceDownload() {
+                      const link = document.createElement('a');
+                      link.href = '${dataUrl}';
+                      link.download = '${filename}';
+                      link.click();
+                    }
+                    setTimeout(forceDownload, 2000);
+                  </script>
+                </body>
+              </html>
+            `);
+            
+            resolve('manual');
+          } catch (error) {
+            console.error('All methods failed:', error);
+            resolve(false);
+          }
+        }
         
       } catch (error) {
         console.error('Download failed:', error);
-        
-        // Fallback: Force download in new tab
-        try {
-          const newWindow = window.open();
-          newWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>Download ${filename}</title>
-                <style>
-                  body { 
-                    font-family: Arial, sans-serif; 
-                    text-align: center; 
-                    padding: 20px; 
-                    background: #f9fafb;
-                  }
-                  .download-container {
-                    max-width: 800px;
-                    margin: 0 auto;
-                    background: white;
-                    padding: 30px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-                  }
-                  .download-btn {
-                    background: #d97706;
-                    color: white;
-                    padding: 15px 30px;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    cursor: pointer;
-                    margin: 20px 10px;
-                  }
-                  .download-btn:hover { background: #b45309; }
-                  img { 
-                    max-width: 100%; 
-                    border: 2px solid #d97706; 
-                    border-radius: 8px; 
-                    margin: 20px 0;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="download-container">
-                  <h2 style="color: #d97706;">Peridot Images - Download Ready</h2>
-                  <p><strong>Your file: ${filename}</strong></p>
-                  <img src="${dataUrl}" alt="Preview" />
-                  <br>
-                  <a href="${dataUrl}" download="${filename}" class="download-btn">
-                    📥 CLICK HERE TO DOWNLOAD
-                  </a>
-                  <button onclick="
-                    const link = document.createElement('a');
-                    link.href = '${dataUrl}';
-                    link.download = '${filename}';
-                    link.click();
-                  " class="download-btn">
-                    💾 FORCE DOWNLOAD
-                  </button>
-                  <p style="color: #666; margin-top: 20px;">
-                    If download doesn't start, right-click the image and select 'Save Image As...'
-                  </p>
-                </div>
-              </body>
-            </html>
-          `);
-          resolve('manual');
-        } catch (windowError) {
-          console.error('Fallback failed:', windowError);
-          resolve(false);
-        }
+        resolve(false);
       }
     });
   };
 
-  // GUARANTEED EXPORT - WILL WORK!
-  const exportWithMultipleTries = async (element, filename) => {
-    // Simple, reliable export
+  // HTML2CANVAS EXPORT
+  const exportWithHtml2Canvas = async (element, filename) => {
     try {
-      console.log('🎯 EXPORTING:', filename);
+      console.log('🎯 Starting export:', filename);
       
-      const dataUrl = await toPng(element, {
-        quality: 1.0,
+      const canvas = await html2canvas(element, {
         backgroundColor: '#ffffff',
-        pixelRatio: 1,
-        cacheBust: true
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        width: element.offsetWidth,
+        height: element.offsetHeight
       });
       
-      console.log('✅ IMAGE GENERATED, FORCING DOWNLOAD...');
+      console.log('✅ Canvas created, downloading...');
       
-      // FORCE DOWNLOAD NOW!
-      const result = await downloadImage(dataUrl, filename);
+      const result = await downloadImage(canvas, filename);
       
       if (result === true) {
-        console.log('🎉 DOWNLOAD SUCCESSFUL!');
         return 'success';
       } else if (result === 'manual') {
-        console.log('📁 MANUAL DOWNLOAD OPENED');
         return 'manual';
       } else {
         throw new Error('Download failed');
       }
       
     } catch (error) {
-      console.error('❌ EXPORT FAILED:', error);
+      console.error('❌ Export failed:', error);
       throw error;
     }
   };
@@ -239,13 +270,12 @@ const PeridotLookbookCreator = () => {
     try {
       const element = document.getElementById(`export-slide-${currentLook.id}`);
       if (!element) {
-        alert('❌ No slide content found! Please add some images or description first.');
+        alert('❌ No slide content! Add images or description first.');
         return;
       }
 
-      // Update button state
       if (exportButton) {
-        exportButton.textContent = '🎯 GENERATING...';
+        exportButton.textContent = '🎯 CREATING...';
         exportButton.disabled = true;
         exportButton.style.opacity = '0.7';
       }
@@ -254,19 +284,15 @@ const PeridotLookbookCreator = () => {
       const safeName = currentLook.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
       const filename = `Peridot_${safeName}_${timestamp}.png`;
       
-      console.log('🚀 STARTING EXPORT FOR:', filename);
+      const result = await exportWithHtml2Canvas(element, filename);
       
-      const result = await exportWithMultipleTries(element, filename);
-      
-      // Success feedback
       if (exportButton) {
         if (result === 'success') {
           exportButton.textContent = '🎉 DOWNLOADED!';
           exportButton.style.backgroundColor = '#10b981';
           exportButton.style.color = 'white';
           
-          // Show success alert
-          alert(`✅ SUCCESS!\n\n"${filename}" has been downloaded to your Downloads folder!`);
+          alert(`✅ SUCCESS!\n\n"${filename}" downloaded to your Downloads folder!`);
           
           setTimeout(() => {
             exportButton.textContent = originalText;
@@ -276,8 +302,8 @@ const PeridotLookbookCreator = () => {
             exportButton.style.color = '';
           }, 3000);
         } else if (result === 'manual') {
-          exportButton.textContent = '📁 OPENED IN TAB';
-          alert('📁 A new tab opened with your image.\n\nClick the download button in the new tab or right-click the image to save it!');
+          exportButton.textContent = '📁 CHECK NEW TAB';
+          alert('📁 New tab opened with download options!');
           setTimeout(() => {
             exportButton.textContent = originalText;
             exportButton.disabled = false;
@@ -287,20 +313,17 @@ const PeridotLookbookCreator = () => {
       }
       
     } catch (error) {
-      console.error('💥 EXPORT FAILED:', error);
-      alert(`❌ Export failed!\n\nError: ${error.message}\n\nPlease try again or refresh the page.`);
+      console.error('Export failed:', error);
+      alert(`❌ Export failed: ${error.message}`);
       
-      // Reset button
       if (exportButton) {
-        exportButton.textContent = '❌ FAILED - RETRY';
+        exportButton.textContent = '❌ FAILED';
         exportButton.style.backgroundColor = '#ef4444';
-        exportButton.style.color = 'white';
         setTimeout(() => {
           exportButton.textContent = originalText;
           exportButton.disabled = false;
           exportButton.style.opacity = '1';
           exportButton.style.backgroundColor = '';
-          exportButton.style.color = '';
         }, 3000);
       }
     }
@@ -310,7 +333,7 @@ const PeridotLookbookCreator = () => {
     const completedLooks = looks.filter(look => look.images.length > 0 || look.description);
     
     if (completedLooks.length === 0) {
-      alert('Please create some looks with images or descriptions first!');
+      alert('Please create some looks first!');
       return;
     }
 
@@ -318,7 +341,6 @@ const PeridotLookbookCreator = () => {
     const originalText = exportButton?.textContent || 'Export All Slides';
     
     try {
-      // Update button
       if (exportButton) {
         exportButton.disabled = true;
         exportButton.style.opacity = '0.7';
@@ -326,7 +348,6 @@ const PeridotLookbookCreator = () => {
 
       let successCount = 0;
       let manualCount = 0;
-      let failedCount = 0;
 
       for (let i = 0; i < completedLooks.length; i++) {
         const look = completedLooks[i];
@@ -334,16 +355,15 @@ const PeridotLookbookCreator = () => {
         
         if (element) {
           try {
-            // Update progress
             if (exportButton) {
               exportButton.textContent = `Exporting ${i + 1}/${completedLooks.length}...`;
             }
             
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            const safeName = look.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+            const timestamp = Date.now() + i;
+            const safeName = look.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
             const filename = `Peridot_${safeName}_${timestamp}.png`;
             
-            const result = await exportWithMultipleTries(element, filename);
+            const result = await exportWithHtml2Canvas(element, filename);
             
             if (result === 'success') {
               successCount++;
@@ -351,19 +371,13 @@ const PeridotLookbookCreator = () => {
               manualCount++;
             }
             
-            // Delay between exports to avoid overwhelming the browser
             await new Promise(resolve => setTimeout(resolve, 1500));
-            
           } catch (error) {
             console.error(`Failed to export ${look.title}:`, error);
-            failedCount++;
           }
-        } else {
-          failedCount++;
         }
       }
       
-      // Show results
       if (exportButton) {
         let resultText = '';
         if (successCount > 0) resultText += `${successCount} downloaded`;
@@ -371,12 +385,8 @@ const PeridotLookbookCreator = () => {
           if (resultText) resultText += ', ';
           resultText += `${manualCount} in tabs`;
         }
-        if (failedCount > 0) {
-          if (resultText) resultText += ', ';
-          resultText += `${failedCount} failed`;
-        }
         
-        exportButton.textContent = resultText || 'Export completed';
+        exportButton.textContent = resultText || 'Completed';
         
         setTimeout(() => {
           exportButton.textContent = originalText;
@@ -385,29 +395,20 @@ const PeridotLookbookCreator = () => {
         }, 5000);
       }
       
-      // User feedback
       let alertMessage = '';
       if (successCount > 0) {
-        alertMessage += `✅ ${successCount} files downloaded to your Downloads folder!\n`;
+        alertMessage += `✅ ${successCount} files downloaded!\n`;
       }
       if (manualCount > 0) {
-        alertMessage += `📁 ${manualCount} files opened in new tabs - right-click to save.\n`;
-      }
-      if (failedCount > 0) {
-        alertMessage += `❌ ${failedCount} files failed to export.\n`;
+        alertMessage += `📁 ${manualCount} files in new tabs.\n`;
       }
       
-      if (alertMessage) {
-        alert(alertMessage);
-      } else {
-        alert('No files were exported. Please check that your looks have content.');
-      }
+      alert(alertMessage || 'Export completed!');
       
     } catch (error) {
       console.error('Bulk export failed:', error);
-      alert(`Bulk export failed: ${error.message}`);
+      alert(`Export failed: ${error.message}`);
       
-      // Reset button
       if (exportButton) {
         exportButton.textContent = originalText;
         exportButton.disabled = false;
@@ -422,7 +423,7 @@ const PeridotLookbookCreator = () => {
   if (viewMode === 'preview') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-yellow-50">
-        {/* Hidden Export Elements - Positioned off-screen for export */}
+        {/* Hidden Export Elements */}
         <div className="fixed left-[-10000px] top-0">
           {completedLooks.map((look) => (
             <div key={`export-${look.id}`} id={`export-slide-${look.id}`} className="w-[800px] h-[1200px] bg-gradient-to-br from-amber-50 via-white to-yellow-50 relative overflow-hidden" style={{fontFamily: 'Arial, Helvetica, sans-serif'}}>
@@ -450,7 +451,7 @@ const PeridotLookbookCreator = () => {
                   <div className="mb-8 text-center">
                     <h3 className="text-lg font-semibold text-amber-800 mb-4">Your Inspiration</h3>
                     <div className="max-w-64 mx-auto">
-                      <img src={clientImage} alt="Client reference" className="w-full rounded-2xl shadow-lg border-4 border-white" />
+                      <img src={clientImage} alt="Client reference" className="w-full rounded-2xl shadow-lg border-4 border-white" crossOrigin="anonymous" />
                     </div>
                   </div>
                 )}
@@ -602,8 +603,7 @@ const PeridotLookbookCreator = () => {
           {completedLooks.length === 0 && (
             <div className="text-center py-16 text-amber-500">
               <Crown className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg">Create some looks to see your professional preview!</p>
-              <p className="text-sm mt-2">Add images or descriptions to your looks in the editor.</p>
+              <p className="text-lg">Create some looks to see your preview!</p>
             </div>
           )}
         </div>
