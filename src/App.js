@@ -450,7 +450,7 @@ const PeridotLookbookCreator = () => {
                 {clientImage && (
                   <div className="mb-8 text-center">
                     <h3 className="text-lg font-semibold text-amber-800 mb-4">Your Inspiration</h3>
-                    <div className="max-w-64 mx-auto">
+                    <div className="max-w-80 mx-auto">
                       <img src={clientImage} alt="Client reference" className="w-full rounded-2xl shadow-lg border-4 border-white" crossOrigin="anonymous" />
                     </div>
                   </div>
@@ -466,19 +466,21 @@ const PeridotLookbookCreator = () => {
                   </div>
                 )}
 
-                {/* Style Images - MUCH LARGER NOW! */}
+                {/* Style Images - IDENTICAL TO CLIENT IMAGE! */}
                 {look.images.length > 0 && (
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-amber-800 mb-4 text-center">Style Inspiration</h3>
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       {look.images.slice(0, 2).map((img) => (
-                        <div key={img.id} className="bg-white/80 rounded-xl p-6 shadow-md border border-amber-200">
-                          <img 
-                            src={img.src} 
-                            alt="Style inspiration" 
-                            className="w-full max-h-96 object-contain rounded-lg mx-auto"
-                            crossOrigin="anonymous"
-                          />
+                        <div key={img.id} className="mb-8 text-center">
+                          <div className="max-w-80 mx-auto">
+                            <img 
+                              src={img.src} 
+                              alt="Style inspiration" 
+                              className="w-full rounded-2xl shadow-lg border-4 border-white"
+                              crossOrigin="anonymous"
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
